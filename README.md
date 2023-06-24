@@ -1,5 +1,6 @@
-# Arduino-measurements
-Measurements for force and acceleration using Arduino
+# Arduino Measurements
+This repository aims to set up an Arduino environment to carry out several simultaneous force and acceleration measurements.
+The data will then be postprocessed with Python and stored locally.
 
 ## 1. Hardware setup
 

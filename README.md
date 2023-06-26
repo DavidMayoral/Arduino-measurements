@@ -3,7 +3,10 @@ This repository aims to set up an Arduino environment to carry out several simul
 The data will then be postprocessed with Python and stored locally.
 
 ## 1. Hardware setup
+### 1.1 Force sensors
 
+
+### 1.2 Accelerometers
 
 ## 2. Arduino software setup
 

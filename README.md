@@ -6,11 +6,11 @@ The data will then be postprocessed with Python and stored locally.
 ### 1.1 Force sensors
 Initially, two load modules of 10kg and 20kg each have been used for testing and configuration purposes. Each set comes with the load cell itself, and also an HX-711 amplifier module, which provides the measured values in a readable scale for Arduino.
 
-![]()
+![LoadCell & HX-711](Sketches/LoadCell.jpg)
 
 The connections between the different components have been carried out as follows:
 
-![]()
+![LoadCell connections](Sketches/LoadCell-diagram.webp)
 
 *Source: Indrek(YouTube)*
 *Source: [circuitjournal.com](https://circuitjournal.com/four-wire-load-cell-with-HX711#arduino-code)*

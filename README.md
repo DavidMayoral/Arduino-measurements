@@ -31,11 +31,16 @@ As well as with the HX-711 amplifier modules, the pins have been soldered to the
 ## 2. Arduino software setup
 The code that was loaded on the Arduino board (`Read_load_accelerometer.ino`) has been constructed based on two independent pieces of code:
 - The base code for the load cells (`Read_1x_load_cell.ino`) was obtained from [Olav Kallhovd (GitHub)](https://github.com/olkal/HX711_ADC). Apart from reading, processing and filtering the measurements, the package also features an option to tare the measuring equipment. Also, running the `Calibrate.ino` file generates a calibration value which can then be used in the main code.
-- The base code for the accelerometers (`Read_accelerometer.ino`) was obtained from [LastMinuteEngineers](https://lastminuteengineers.com/adxl335-accelerometer-arduino-tutorial/).
-
+- The base code for the accelerometers (`Read_accelerometer.ino`) was obtained from [LastMinuteEngineers](https://lastminuteengineers.com/adxl335-accelerometer-arduino-tutorial/). The main feature is the use of a function (`int ReadAxis()`) that performs 10 independent measurements and averages them before providing a value.
 
 #### Measurements
+The board has been programmed according to the following sequence:
 
+- First, it waits until new measurement data from the load cells are available.
+- Then, if enough time has passed since the last serial print, the measurement process of the accelerometers is triggered.
+- Once the acceleration data are available, they are postprocessed and translated into acceleration in G's.
+
+Every set of measurements will be composed of one value per load cell and three values for every accelerometer.
 
 #### Transmission over Serial port
 

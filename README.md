@@ -12,23 +12,27 @@ The connections between the different components have been carried out as follow
 
 ![LoadCell connections](Sketches/LoadCell-diagram.webp)
 
-*Source: Indrek(YouTube)*
 *Source: [circuitjournal.com](https://circuitjournal.com/four-wire-load-cell-with-HX711#arduino-code)*
+
+A+ and A- wires can be interchanged, since this would only affect the sign of the output value. DT and SCK pins have to be connected to digital pins on the Arduino board.
 
 The pins have been soldered to the HX-711 amplifier module to make easier but solid connections with the wires.
 
 ### 1.2 Accelerometers
 
-As well as with the HX-711 amplifier modules, the pins have been soldered to the accelerometers.
+Apart from a 5V power supply, each accelerometer requires connection with 3 analogue pins. No amplifier module is needed in this case.
 
 ![Connection Accelerometer to Arduino](Sketches/Accelerometer-to-Arduino.png)
 
 *Source: lastminuteengineers.com*
 
-## 2. Arduino software setup
-The base code that was used and later adapted (`Read_2x_load_cell.ino`) was obtained from [Olav Kallhovd (GitHub)](https://github.com/olkal/HX711_ADC). 
+As well as with the HX-711 amplifier modules, the pins have been soldered to the accelerometers.
 
-Apart from reading, processing and filtering the measurements, the package also features an option to tare the measuring equipment. Also, running the `Calibrate.ino` file generates a calibration value which can then be used in the main code.
+## 2. Arduino software setup
+The code that was loaded on the Arduino board (`Read_load_accelerometer.ino`) has been constructed based on two independent pieces of code:
+- The base code for the load cells (`Read_1x_load_cell.ino`) was obtained from [Olav Kallhovd (GitHub)](https://github.com/olkal/HX711_ADC). Apart from reading, processing and filtering the measurements, the package also features an option to tare the measuring equipment. Also, running the `Calibrate.ino` file generates a calibration value which can then be used in the main code.
+- The base code for the accelerometers (`Read_accelerometer.ino`) was obtained from [LastMinuteEngineers](https://lastminuteengineers.com/adxl335-accelerometer-arduino-tutorial/).
+
 
 #### Measurements
 
@@ -38,7 +42,7 @@ Apart from reading, processing and filtering the measurements, the package also 
 Every set of simultaneous measurements are transmitted in a single line, separated by commas (','). 
 
 ## 3. Python postprocessing
-The operations detailed below have been implemented in the following file: `Postprocessing` / `serial_connection`
+The operations detailed below have been implemented in the following file: `Postprocessing` / `serial_connection.py`
 
 The Python 'serial' module enables to read the incoming data over the Serial port. 
 

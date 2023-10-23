@@ -32,7 +32,7 @@ As well as with the ADXL345 amplifier modules, the pins have been soldered to th
 
 Some pictures of the actual hardware setup are presented below.
 
-![Complete setup](Hardware_setup/Complete_conns.jpg)
+![Complete setup](Hardware_setup/Complete_setup.jpg)
 
 ![Board connections](Hardware_setup/Board_conns.jpg)
 

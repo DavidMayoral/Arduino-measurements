@@ -32,13 +32,13 @@ As well as with the ADXL345 amplifier modules, the pins have been soldered to th
 
 Some pictures of the actual hardware setup are presented below.
 
-![Complete setup]()
+![Complete setup](Hardware_setup/Complete_conns.jpg)
 
-![Board connections]()
+![Board connections](Hardware_setup/Board_conns.jpg)
 
-![ADXL345 connections]()
+![ADXL345 connections](Hardware_setup/ADXL345_conns.jpg)
 
-![Accelerometer connections]()
+![Accelerometer connections](Hardware_setup/Accelerometer_conns.jpg)
 
 ## 2. Arduino software setup
 The code that was loaded on the Arduino board (`Read_load_accelerometer.ino`) has been constructed based on two independent pieces of code:

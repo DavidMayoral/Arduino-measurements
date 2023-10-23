@@ -3,31 +3,46 @@
 #include <EEPROM.h>
 #endif
 
+#include <Wire.h>  // Wire library - used for I2C communication
+
 // PINS
-const int force1dout  = 4; //mcu > HX711 no 1 dout pin
-const int force1sck   = 5; //mcu > HX711 no 1 sck pin
-const int force2dout  = 6; //mcu > HX711 no 2 dout pin
-const int force2sck   = 7; //mcu > HX711 no 2 sck pin
-const int acc1X = A0;
-const int acc1Y = A1;
-const int acc1Z = A2;
-const int acc2X = A3;
-const int acc2Y = A4;
-const int acc2Z = A5;
+const int force1dout  = 2; //mcu > HX711 no 1 dout pin
+const int force1sck   = 4; //mcu > HX711 no 1 sck pin
+const int force2dout  = 3; //mcu > HX711 no 2 dout pin
+const int force2sck   = 5; //mcu > HX711 no 2 sck pin
 
-const int RawMin = 0;
-const int RawMax = 1023;
-
-const int sampleSize = 10;  // size of the measurement sample
-
-//HX711 constructor
+//HX711 constructortau
 HX711_ADC LoadCell_1(force1dout, force1sck); //HX711 1
 HX711_ADC LoadCell_2(force2dout, force2sck); //HX711 2
 
 // EEPROM adress for calibration value (4 bytes)
 const int calVal_eepromAdress_1 = 0;
 const int calVal_eepromAdress_2 = 4;
+
 unsigned long t = 0;
+float startTimer = 0;
+float lastPrint = 0;
+volatile boolean newDataReady;
+
+// ACCELEROMETER ADXL345
+int ADXL345 = 0x53; // The ADXL345 sensor I2C address
+
+float accCalibration = 1;
+const int sampleSize = 10;  // size of the measurement sample
+
+// SERIAL MONITOR
+int counter = 0;
+const int n = 100;       // number of measurements until values are printed
+int timesTimed = 0;
+int timesChecked = 0;
+String data[n];
+float timer[n];         // time different processes to check delays
+unsigned long timer2 = 0.;
+
+
+// *****************************************
+//                    SETUP
+// *****************************************
 
 void setup() {
   Serial.begin(57600); delay(10);
@@ -35,7 +50,7 @@ void setup() {
   //Serial.println("Starting...");
 
   // LOAD CELLS
-  ///////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////
   float calibrationValue_1; // calibration value load cell 1
   float calibrationValue_2; // calibration value load cell 2
 
@@ -73,42 +88,91 @@ void setup() {
 
 
   // ACCELEROMETERS
-  ///////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////
+  float X_raw, Y_raw, Z_raw;  
+  long Raw1[3];                  // Acceleration outputs
+  float X_acc, Y_acc, Z_acc;  // Acceleration scaled in G
 
-  // minimum and maximum ranges for each axis
-  const int RawMin = 0;
-  const int RawMax = 1023;
-
-  const int SampleSize = 10;  // size of the measurement sample
-
-  analogReference(EXTERNAL);
+  Wire.begin(); // Initiate the Wire library
+  // Set ADXL345 in measuring mode
+  Wire.beginTransmission(ADXL345); // Start communicating with the device 
+  Wire.write(0x2D); // Access/ talk to POWER_CTL Register - 0x2D
+  // Enable measurement
+  Wire.write(8); // (8dec -> 0000 1000 binary) Bit D3 High for measuring enable 
+  Wire.endTransmission();
+  delay(10);
+ 
+  // Attaching interrupt in the DOUT pins in order to achieve maximum effective sample rate
+  attachInterrupt(digitalPinToInterrupt(force1dout), dataReadyISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(force2dout), dataReadyISR, FALLING);
 }
 
-void loop() {
-  static boolean newDataReady = 0;
-  const int serialPrintInterval = 0; //increase value to slow down serial print activity
 
-  // check for new data/start next conversion:
+
+//interrupt routine:
+void dataReadyISR() {
   if (LoadCell_1.update()) newDataReady = true;
-  LoadCell_2.update();  
+  LoadCell_2.update(); 
+}
 
+// *****************************************
+//                    LOOP
+// *****************************************
+
+void loop() {
+  const int serialPrintInterval = 0; //increase value to slow down serial print activity
+  //if (LoadCell_1.update()) newDataReady = true;
+  //timesChecked++;
+  /*
+  if (digitalRead(force1dout) == 0 | digitalRead(force2dout) == 0){
+    timesTimed++;
+    timer2 += (millis() - startTimer);
+  }
+  */
   
-  //////////////////////////
-  // SERIAL PRINT
-  // get smoothed value from data set
-  if ((newDataReady)) {
+  if (newDataReady) {
+    timer[counter] = millis() - startTimer;
     if (millis() > t + serialPrintInterval) {
+      
       // UPDATE LOAD CELLS
       float force1 = LoadCell_1.getData();
       float force2 = LoadCell_2.getData();
-
+      //Serial.print("[T]getData duration: ");
+      //Serial.println(millis() - startGetData);
+      
       // UPDATE ACCELEROMETERS
-      // read raw values - ReadAxis() takes 10 values and returns the average
-      int xRaw1 = ReadAxis(acc1X);
-      int yRaw1 = ReadAxis(acc1Y);
-      int zRaw1 = ReadAxis(acc1Z);
-      int Raw1[3] = {ReadAxis(acc1X), ReadAxis(acc1Y), ReadAxis(acc1Z)};
-    
+      /*
+      // read raw values - ReadAccel() takes 10 values and returns the average
+      float Raw1[3];
+      Raw1 = ReadAccel(sampleSize);
+      ReadAccel(Raw1, sampleSize);
+
+      
+    // scaling the raw acceleration values
+      float X_acc = Raw1[0]/256 * accCalibration; //For a range of +-2g, we need to divide the raw values by 256, according to the datasheet
+      float Y_acc = Raw1[1]/256 * accCalibration;
+      float Z_acc = Raw1[2]/256 * accCalibration;
+      */
+      
+      Wire.beginTransmission(ADXL345);
+      Wire.write(0x32); // Start with register 0x32 (ACCEL_XOUT_H)
+      Wire.endTransmission(false);
+      Wire.requestFrom(ADXL345, 6, true);
+
+      float X_acc = ( Wire.read()| Wire.read() << 8); // X-axis value
+      float Y_acc = ( Wire.read()| Wire.read() << 8); // Y-axis value
+      float Z_acc = ( Wire.read()| Wire.read() << 8); // Z-axis value
+      X_acc = X_acc/256 * accCalibration; //For a range of +-2g, we need to divide the raw values by 256, according to the datasheet
+      Y_acc = Y_acc/256 * accCalibration;
+      Z_acc = Z_acc/256 * accCalibration;
+      float acc = sqrt(pow(X_acc,2) + pow(Y_acc,2) + pow(Z_acc,2));
+
+      //Serial.print("[T]Acc measurement duration: ");
+      //Serial.println(millis() - startAccMeas);
+
+      newDataReady = 0;
+      
+      /*
       // converting values to acceleration
       long xScaled1 = map(xRaw1, RawMin, RawMax, -3000, 3000);
       long yScaled1 = map(yRaw1, RawMin, RawMax, -3000, 3000);
@@ -117,7 +181,6 @@ void loop() {
         for(int i=0; i<=2; i++){
           Scaled1[i] = map(Raw1[i], RawMin, RawMax, -3000, 3000);
         }
-    
       // converting accelerations to fractional Gs
       float xAccel1 = xScaled1 / 1000.0;
       float yAccel1 = yScaled1 / 1000.0;
@@ -126,20 +189,77 @@ void loop() {
       for(int i=0; i<=2; i++){
         Accel1[i] = Scaled1[i] / 1000.0;
       }
+      */
+      
+      //////////////////////////
+      // SERIAL PRINT
+      
+      data[counter] = String(force1) + "," + String(force2) + "," + String(X_acc) + "," + String(Y_acc) + "," + String(Z_acc) + "," + String(acc);
+      /*
+      data[counter] = force1;
+      data[counter].append(",");
+      data[counter].append(force2);
+      data[counter].append(",");
+      data[counter].append(X_acc);
+      data[counter].append(",");
+      data[counter].append(Y_acc);
+      data[counter].append(",");
+      data[counter].append(Z_acc);
+      data[counter].append(",");
+      data[counter].append(acc);
+      */
       
       Serial.print(force1);
       Serial.print(",");
-      Serial.println(force2);
-      Serial.print(xAccel1);
+      Serial.print(force2);
       Serial.print(",");
-      Serial.print(yAccel1);
+      
+      Serial.print(X_acc);
       Serial.print(",");
-      Serial.println(zAccel1);
-      newDataReady = 0;
+      Serial.print(Y_acc);
+      Serial.print(",");
+      Serial.println(Z_acc);
+      //Serial.print(",");
+      //Serial.println(acc);
+      
       t = millis();
+      startTimer = millis();    
     }
+    /*
+    counter += 1;
+    if (counter == n) {
+      counter = 0;
+      float sum = 0;
+      for (int i=0; i<n; i++) sum += timer[i];
+      double freq = 1000.*n / (millis()-lastPrint);
+      Serial.print("[TIMER] ");
+      Serial.println(sum/n);
+      Serial.print("[TIMER2] ");
+      Serial.println(timer2/timesTimed);
+      Serial.print("[TIMES TIMED] ");
+      Serial.println(timesTimed);
+      //Serial.print("[TIMES CHECKED] ");
+      //Serial.println(timesChecked);
+      Serial.print("[t=");
+      Serial.print(millis());
+      Serial.print("] ");
+      Serial.println(1000./freq);
+      Serial.print("[FREQ] ");
+      Serial.println(freq);
+      Serial.print("[DATA] ");
+      Serial.println(data[n-1]);
+      lastPrint = millis();
+      for (int i=0; i<n; i++) {
+        //Serial.println(data[i]);
+        data[i] = "";
+      timer2 = 0;
+      timesTimed = 0;
+      timesChecked = 0;
+      }
+    }
+    */
+    startTimer = millis();
   }
-
   //////////////////////////
   // TARE OPERATION
   // receive command from serial terminal, send 't' to initiate tare operation:
@@ -152,22 +272,35 @@ void loop() {
   }
   //check if last tare operation is complete
   if (LoadCell_1.getTareStatus() == true) {
-    Serial.println("Tare load cell 1 complete");
+    //Serial.println("Tare load cell 1 complete");
   }
   if (LoadCell_2.getTareStatus() == true) {
-    Serial.println("Tare load cell 2 complete");
+    //Serial.println("Tare load cell 2 complete");
   }
+  
 }
 
 
-// takes samples and return the average
-int ReadAxis(int axisPin)
-{
-  long reading = 0;
-  analogRead(axisPin);
-  delay(1);
+// takes samples and returns the average
+void ReadAccel(float* output, int sampleSize){
+  float X_out = 0;
+  float Y_out = 0;
+  float Z_out = 0;
+
   for (int i = 0; i < sampleSize; i++){
-    reading += analogRead(axisPin);
+    Wire.beginTransmission(ADXL345);
+    Wire.write(0x32); // Start with register 0x32 (ACCEL_XOUT_H)
+    Wire.endTransmission(false);
+    delay(1);
+    
+    Wire.requestFrom(ADXL345, 6, true); // Read 6 registers total, each axis value is stored in 2 registers
+    X_out += ( Wire.read()| Wire.read() << 8); // X-axis value
+    Y_out += ( Wire.read()| Wire.read() << 8); // Y-axis value
+    Z_out += ( Wire.read()| Wire.read() << 8); // Z-axis value
   }
-  return reading/sampleSize;
+  //static long output[3];
+  output[0] = X_out / sampleSize;
+  output[1] = Y_out / sampleSize;
+  output[2] = Z_out / sampleSize;  
+  //return output;
 }

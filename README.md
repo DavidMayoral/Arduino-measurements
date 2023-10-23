@@ -48,9 +48,12 @@ The code that was loaded on the Arduino board (`Read_load_accelerometer.ino`) ha
 #### Measurements
 The board has been programmed according to the following sequence:
 
-- First, it waits until new measurement data from the load cells are available.
-- Then, if enough time has passed since the last serial print, the measurement process of the accelerometers is triggered.
+- Some variables and relevant parameters (like the pins configuration or the calibration value) are initialized.
+- Setup operations (like calibration of the sensors) are run.
+- Then, it enters the loop where it waits until new measurement data from the load cells are available. Additionally, an interrupt routine has been added so that this condition is contiuously being checked.
+- If enough time has passed since the last serial print, the measurement process of the accelerometers is triggered.
 - Once the acceleration data are available, they are postprocessed and translated into acceleration in G's.
+- The adapted force and acceleration measurements are printed over the Serial port.
 
 Every set of measurements will be composed of one value per load cell and three values for every accelerometer.
 
@@ -59,6 +62,14 @@ Every set of measurements will be composed of one value per load cell and three 
 Every set of simultaneous measurements are transmitted in a single line, separated by commas (','). 
 
 ## 3. Postprocessing and measurement assessment
+
+#### Simultaneous plotting
+
+In order to visualize the measurements live, a very simple but useful tool can be used: Tauno Serial Plotter, by Tauno Erik. More information can be found in [its repository](https://github.com/taunoe/tauno-serial-plotter).
+
+![Tauno Serial Plotter](Sketches/Tauno.png)
+
+#### Measurement parameters
 
 Although a Python tool has been developed for postprocessing (in particular to calculate the sampling frequency), the same operations can be carried out within the Arduino C++ code and are pushed through the Serial port.
 
